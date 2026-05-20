@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>상품(대출·비대출) 영역 — 종합 분석 합본</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Apple SD Gothic Neo','Malgun Gothic',sans-serif;font-size:12px;background:#f2f4f8;color:#1a1a2e;padding:0;}
+/* ── 패스워드 오버레이 ── */
+#pw-overlay{position:fixed;inset:0;background:#0c1a3a;display:flex;align-items:center;justify-content:center;z-index:9999;}
+#pw-box{background:#fff;border-radius:14px;padding:36px 40px;text-align:center;width:320px;box-shadow:0 8px 32px rgba(0,0,0,0.25);}
+#pw-box h2{font-size:15px;font-weight:700;color:#0c1a3a;margin-bottom:6px;}
+#pw-box p{font-size:11px;color:#888;margin-bottom:18px;}
+#pw-input{width:100%;border:1.5px solid #d0d5e8;border-radius:8px;padding:10px 14px;font-size:16px;text-align:center;letter-spacing:6px;outline:none;margin-bottom:10px;}
+#pw-input:focus{border-color:#3266ad;}
+#pw-btn{width:100%;background:#3266ad;color:#fff;border:none;border-radius:8px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;}
+#pw-btn:hover{background:#185fa5;}
+#pw-err{color:#c0392b;font-size:11px;margin-top:8px;min-height:16px;}
+/* ── 메인 ── */
+#main-content{display:none;padding:16px;}
+.wrap{max-width:1200px;margin:0 auto;}
+h1{font-size:17px;font-weight:700;margin-bottom:4px;}
+.premise{font-size:11px;background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px 14px;margin-bottom:14px;line-height:1.75;}
+.premise strong{font-weight:700;color:#b45300;}
+.tab-bar{display:flex;border-bottom:2px solid #d0d5e8;margin-bottom:16px;flex-wrap:wrap;}
+.tab{padding:9px 13px;font-size:12px;font-weight:600;cursor:pointer;color:#888;border-bottom:2.5px solid transparent;margin-bottom:-2px;background:none;border-top:0;border-left:0;border-right:0;white-space:nowrap;}
+.tab.active{color:#0c1a3a;border-bottom-color:#3266ad;}
+.panel{display:none;}.panel.active{display:block;}
+.sec{font-size:10px;font-weight:700;color:#888;letter-spacing:.07em;text-transform:uppercase;margin:16px 0 7px;padding-bottom:3px;border-bottom:1px solid #e0e4ec;}
+.box{background:#fff;border:1px solid #e0e4ec;border-radius:10px;padding:13px 15px;margin-bottom:11px;}
+.box-t{font-size:13px;font-weight:700;color:#0c1a3a;margin-bottom:9px;}
+.m4{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px;}
+.m5{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:12px;}
+.m6{display:grid;grid-template-columns:repeat(6,1fr);gap:7px;margin-bottom:12px;}
+.mc{background:#fff;border:1px solid #e0e4ec;border-radius:8px;padding:9px 12px;}
+.mc .l{font-size:10px;color:#888;margin-bottom:2px;}
+.mc .v{font-size:18px;font-weight:700;color:#0c1a3a;}
+.mc .s{font-size:10px;color:#aaa;margin-top:1px;}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:11px;}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:11px;margin-bottom:11px;}
+/* tables */
+.tbl{width:100%;border-collapse:collapse;font-size:11px;}
+.tbl th{padding:5px 6px;font-size:10px;font-weight:700;color:#888;border-bottom:1px solid #eee;text-align:left;white-space:nowrap;background:#fafbfc;}
+.tbl th.r,.tbl td.r{text-align:right;}
+.tbl th.c,.tbl td.c{text-align:center;}
+.tbl td{padding:5px 6px;border-bottom:1px solid #f0f0f0;color:#1a1a2e;vertical-align:top;}
+.tbl tfoot td{font-weight:700;background:#f0f4fb;border-top:1px solid #d0d8ec;}
+.tbl tbody tr:hover{background:#f8f9fb;}
+/* notes */
+.rn{border-left:4px solid;padding:8px 11px;border-radius:0 7px 7px 0;margin-bottom:8px;font-size:11px;line-height:1.75;}
+.rn.p1{border-color:#c0392b;background:#fff5f5;}
+.rn.p2{border-color:#e67e22;background:#fff9f0;}
+.rn.p3{border-color:#f0c040;background:#fffdf0;}
+.rn.ok{border-color:#27ae60;background:#f0faf4;}
+.rn.info{border-color:#3266ad;background:#f0f5fb;}
+.rn strong{font-weight:700;display:block;margin-bottom:2px;}
+/* badges */
+.badge{display:inline-block;border-radius:7px;padding:1px 7px;font-size:10px;font-weight:700;}
+.b-r{background:#fde;color:#c0392b;}.b-o{background:#fef0e0;color:#b45300;}
+.b-y{background:#fffbe6;color:#7a6000;}.b-g{background:#e8f7ee;color:#1a6b3a;}
+.b-b{background:#e8f0fb;color:#1a3a7a;}
+/* pills */
+.pill{display:inline-block;border-radius:9px;padding:2px 7px;font-size:10px;font-weight:600;margin:1px;}
+.ph-an{background:#dce8fb;color:#1a3a7a;}.ph-se{background:#c8dbf8;color:#0c2d6a;}
+.ph-de{background:#185fa5;color:#fff;}.ph-te{background:#0c447c;color:#fff;}
+.ph-ih{background:#082d52;color:#fff;}.ph-st{background:#051e38;color:#fff;}
+/* grade badges */
+.g-te{background:#0c447c;color:#fff;border-radius:7px;padding:1px 6px;font-size:10px;font-weight:700;}
+.g-hi{background:#185fa5;color:#fff;border-radius:7px;padding:1px 6px;font-size:10px;font-weight:700;}
+.g-md{background:#5a9fd4;color:#fff;border-radius:7px;padding:1px 6px;font-size:10px;font-weight:700;}
+.g-lo{background:#b8d4e8;color:#042c53;border-radius:7px;padding:1px 6px;font-size:10px;font-weight:700;}
+.tbd{color:#e24b4a;font-weight:700;}
+.tag-ok{background:#d4edda;color:#155724;border-radius:7px;padding:2px 8px;font-size:10px;font-weight:700;}
+.tag-warn{background:#fff3cd;color:#856404;border-radius:7px;padding:2px 8px;font-size:10px;font-weight:700;}
+.tag-bad{background:#f8d7da;color:#721c24;border-radius:7px;padding:2px 8px;font-size:10px;font-weight:700;}
+/* person table overrides */
+.dev-cell{background:#e8f4fb;color:#0c447c;font-weight:700;}
+.mgmt-cell{background:#fef0e0;color:#8a4500;font-weight:700;}
+.overload{background:#fff0f0;}
+/* compact person table */
+.ctbl{width:100%;border-collapse:collapse;font-size:10.5px;}
+.ctbl th{padding:4px 4px;font-size:9.5px;font-weight:700;color:#888;border-bottom:1px solid #eee;text-align:left;white-space:nowrap;background:#fafbfc;}
+.ctbl th.r,.ctbl td.r{text-align:right;}
+.ctbl td{padding:4px 4px;border-bottom:1px solid #f0f0f0;color:#1a1a2e;vertical-align:top;}
+.ctbl tfoot td{font-weight:700;background:#f0f4fb;border-top:1px solid #dde;}
+.ctbl tbody tr:hover{background:#f8f9fb;}
+.name-grade{white-space:nowrap;}
+/* prep card */
+.prep-card{border:1px solid #e0e4ec;border-radius:10px;overflow:hidden;margin-bottom:11px;}
+.prep-head{padding:9px 13px;display:flex;align-items:center;gap:10px;}
+.prep-title{font-size:13px;font-weight:700;color:#fff;flex:1;}
+.prep-body{padding:12px 14px;background:#fff;}
+.ck{list-style:none;padding:0;}
+.ck li{padding:5px 0 5px 18px;position:relative;border-bottom:1px solid #f3f3f3;font-size:11px;line-height:1.65;}
+.ck li:last-child{border-bottom:none;}
+.ck li::before{content:'▶';position:absolute;left:0;color:#3266ad;font-size:9px;top:7px;}
+.ck li strong{font-weight:700;color:#0c1a3a;}
+</style>
+</head>
+<body>
+<!-- ===== 패스워드 오버레이 ===== -->
+<div id="pw-overlay">
+  <div id="pw-box">
+    <div style="font-size:36px;margin-bottom:10px;">📊</div>
+    <h2>상품개발 종합분석 합본</h2>
+    <p>접근을 위해 패스워드를 입력하세요</p>
+    <input type="password" id="pw-input" maxlength="10" placeholder="••••" autofocus onkeydown="if(event.key==='Enter')checkPw()">
+    <button id="pw-btn" onclick="checkPw()">확인</button>
+    <div id="pw-err"></div>
+  </div>
+</div>
+
+<!-- ===== 메인 콘텐츠 ===== -->
+<div id="main-content">
+<div class="wrap">
+<h1>📊 상품(대출·비대출) 영역 — 투입 적정성 및 비개발 Effort 종합 합본</h1>
+
+<div class="premise">
+<strong>📌 사업 전제 (코어뱅킹 비대면 사업 — 상품 업무팀 기준)</strong><br>
+<b>비대면 사업범위:</b> 스타뱅킹 재구축, 기업뱅킹 재구축, 전자금융업무/원장 재배치, 비대면 독립형플랫폼(PaaS), 임베디드금융 재구축, 통합어드민 재구축, 피그마 도입, Onpremise → 클라우드 전환<br>
+<b>대면 사업(타 사업·별도):</b> C2J 전환, API Integration Hub, 후처리/EDA 플랫폼, 상품팩토링 재구축 → 상품 업무팀은 이 결과물을 <b>수신·대응</b>하는 역할<br>
+<b>상품 업무팀 개발 구조:</b> ① Front: JSP→React, 피그마 기반 UXUI팀 산출물 이벤트처리·데이터바인딩 / AI솔루션 초기템플릿 활용 / 선도개발 참여 ② BackEnd: 기술공통팀으로부터 전환 Tool 교육 후 <b>상품 업무 개발팀이 직접</b> 소스 변환·품질점검·수정, 신규/개선 요건 반영<br>
+<b>⚠ 중요:</b> 비대출 영역 전 인력(PL 포함) — RFP 검토·사전 논의·제안서 작성 미참여, 상품 사업경험 전무. 6월 착수 시점에 기존 사업 참여 중으로 사전 준비 전무 상황<br>
+<b>인력 조정:</b> C1 SK 5명 타영역 재배치 제외 → C1 25명·361 M/M / C2 18명·205 M/M
+</div>
+
+<div class="tab-bar">
+  <button class="tab active" onclick="sw('overview')">① 사업 구조 및 개요</button>
+  <button class="tab" onclick="sw('kickoff')">② 착수 전·후 우선 작업</button>
+  <button class="tab" onclick="sw('c1detail')">③ C1 비대출 상세</button>
+  <button class="tab" onclick="sw('c2detail')">④ C2 대출 상세</button>
+  <button class="tab" onclick="sw('effort')">⑤ 비개발 Effort 분석</button>
+  <button class="tab" onclick="sw('risk')">⑥ 종합 적정성·리스크 진단</button>
+</div>
+
+<!-- ============================================================ TAB 1: 개요 -->
+<div id="panel-overview" class="panel active">
+
+<div class="m6">
+  <div class="mc"><div class="l">C1+C2 인원</div><div class="v" style="color:#3266ad">43명</div><div class="s">SK5명 제외 조정후</div></div>
+  <div class="mc"><div class="l">C1+C2 총M/M</div><div class="v" style="color:#3266ad">566.0</div><div class="s">전체 7,609.8의 7.4%</div></div>
+  <div class="mc"><div class="l">비개발 합계</div><div class="v" style="color:#c0392b">187.5</div><div class="s">33.1%(자체116+타팀71.5)</div></div>
+  <div class="mc"><div class="l">순 개발 가용</div><div class="v">378.5</div><div class="s">66.9%</div></div>
+  <div class="mc"><div class="l">개발 구조</div><div class="v" style="font-size:13px;">2-Track</div><div class="s">Front(React)+BackEnd(변환+신규)</div></div>
+  <div class="mc"><div class="l">사업 기간</div><div class="v">19개월</div><div class="s">분석~안정화</div></div>
+</div>
+
+<div class="box">
+  <div class="box-t">상품 업무팀 개발 구조 — 비대면 사업 전제 반영</div>
+  <table class="tbl">
+    <thead><tr><th>구분</th><th>As-Is</th><th>To-Be</th><th>상품 업무팀 역할</th><th>지원 타팀</th><th>비고</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><b>Front 개발</b><br><small>화면 재개발</small></td>
+        <td>JSP/JavaScript</td><td>React (피그마 기반)</td>
+        <td>이벤트 처리, 서버 전문 송수신, 데이터 바인딩. AI 솔루션으로 생성된 HTML 초기 템플릿 기반 개발</td>
+        <td>개인뱅킹UXUI팀(기획·디자인·퍼블리싱·피그마)<br>AI솔루션팀(초기템플릿 Tool)<br>아키텍처·공통팀(기본템플릿·공통API·선도개발)</td>
+        <td><span class="badge b-o">React 전환 학습 Effort 포함</span><br><span class="badge b-b">선도개발 참여 M/M</span></td>
+      </tr>
+      <tr>
+        <td><b>BackEnd 개발</b><br><small>소스 변환+신규</small></td>
+        <td>Legacy (Java)</td><td>Spring Boot (클라우드·PaaS)</td>
+        <td>기술공통팀으로부터 자동변환 Tool 교육 수령 후, 상품 업무 개발팀이 직접 asis 소스 변환 및 품질점검·수정. 신규/개선 요건 반영 개발</td>
+        <td>기술공통(BackEnd 소스 자동변환 Tool 교육)<br>기술공통(독립형플랫폼(PaaS))</td>
+        <td><span class="badge b-g">개발팀 직접 수행 — 별도 Effort 아님</span></td>
+      </tr>
+      <tr>
+        <td><b>연동 대응개발</b><br><small>코어뱅킹 대응</small></td>
+        <td>레거시 연동</td><td>API Integration Hub · EDA · 상품팩토링</td>
+        <td>비대면 상품 서비스에 필요한 정보를 <b>대면 코어뱅킹 업무팀(공통/수신/여신/상품팀 등)에 요청하여 전문 대응답을 수신</b>하는 것이 핵심. API Hub·EDA·상품팩토링 연동은 이를 위한 기술 채널</td>
+        <td>대면 코어뱅킹 업무팀(공통/수신/여신/상품팀 등)<br>API Integration Hub팀<br>EDA 플랫폼팀<br>상품팩토링팀</td>
+        <td><span class="badge b-r">일정 의존성 리스크 高</span><br><span class="badge b-r">분석·설계부터 협의 필수</span></td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="g2">
+  <div class="box">
+    <div class="box-t">월별 C1+C2 투입 추이</div>
+    <div style="position:relative;height:210px;"><canvas id="monthChart"></canvas></div>
+  </div>
+  <div class="box">
+    <div class="box-t">단계별 M/M 비중 비교 (C1 vs C2)</div>
+    <div style="position:relative;height:210px;"><canvas id="phaseChart"></canvas></div>
+  </div>
+</div>
+
+<div class="box">
+  <div class="box-t">상품 업무팀 영향 타업무팀 연관도</div>
+  <table class="tbl">
+    <thead><tr><th>타업무팀</th><th>사업내 총M/M</th><th>상품팀 영향 유형</th><th class="r">C1 M/M</th><th class="r">C2 M/M</th><th class="r">합계</th><th>영향도</th></tr></thead>
+    <tbody>
+      <tr><td><b>대면 코어뱅킹<br>업무팀</b><br><small>공통/수신/여신/상품팀 등</small></td><td>타 사업</td>
+        <td><b>핵심 협업팀.</b> 비대면 상품 서비스에 필요한 정보 요청·수신 대응. 수신 원장 조회, 여신 심사결과, 상품 코드·한도·금리 등 전문 데이터 요청·응답 협의. API Hub/EDA/상품팩토링 연동 요건 사전 정의</td>
+        <td class="r">8.0</td><td class="r">7.0</td><td class="r"><b>15.0</b></td><td><span class="badge b-r">최고중요</span></td>
+      </tr>
+      <tr><td><b>기술공통</b><br><small>아키텍처·인프라·보안·제3자테스트</small></td><td class="r">958.3</td>
+        <td>신규 아키텍처 기준 적용, BackEnd 소스 자동변환 Tool 교육, 클라우드·PaaS 환경, 보안검토 대응, 제3자테스트 결과 대응, 이행관리 체크리스트</td>
+        <td class="r">12.0</td><td class="r">8.0</td><td class="r"><b>20.0</b></td><td><span class="badge b-r">HIGH</span></td>
+      </tr>
+      <tr><td><b>독립형플랫폼</b><br><small>채널공통·FE·어드민·AI솔루션</small></td><td class="r">1,004.0</td>
+        <td>채널공통 IF 변경 수신·반영, 비대면FE 연동 검증, 통합어드민 화면 협의, AI추천 API 연동, AI솔루션 초기템플릿 수령</td>
+        <td class="r">10.0</td><td class="r">7.0</td><td class="r"><b>17.0</b></td><td><span class="badge b-r">HIGH</span></td>
+      </tr>
+      <tr><td><b>개인뱅킹 UXUI</b><br><small>스타뱅킹앱·인터넷뱅킹·피그마</small></td><td class="r">622.5</td>
+        <td>피그마 기반 스토리보드·퍼블리싱 산출물 수령 → 이벤트처리·데이터바인딩 개발, 화면 시나리오 협의, 디자인 시스템 변경 대응</td>
+        <td class="r">9.0</td><td class="r">7.0</td><td class="r"><b>16.0</b></td><td><span class="badge b-o">MID</span></td>
+      </tr>
+      <tr><td><b>PMO</b><br><small>총괄PM·사업관리·품질관리</small></td><td class="r">181.0</td>
+        <td>주간·월간보고 제출, 산출물 품질검토 대응, 이슈·리스크 등록·추적, 형상관리 준수</td>
+        <td class="r">5.5</td><td class="r">4.0</td><td class="r"><b>9.5</b></td><td><span class="badge b-o">MID</span></td>
+      </tr>
+    </tbody>
+    <tfoot><tr><td colspan="3"><b>타업무팀 대응 Effort 합계</b></td><td class="r"><b>44.5</b></td><td class="r"><b>33.0</b></td><td class="r"><b>77.5</b></td><td></td></tr></tfoot>
+  </table>
+</div>
+
+</div><!-- /panel-overview -->
+
+<!-- ============================================================ TAB 2: 착수 전·후 우선 작업 -->
+<div id="panel-kickoff" class="panel">
+<div class="rn p1"><strong>⚠ 현황: 비대출 영역 전 인력 경험 부족 상황</strong>PL 포함 전 인력이 RFP 검토·사전논의·제안서 작성 미참여, 상품 사업경험 전무. 6월 착수 직전 기존 사업 참여 중으로 사전 준비 전무. 아래 착수 전·후 단계별 우선 작업을 공통 사항과 인력별로 제시합니다.</div>
+
+<div class="sec">공통 — 착수 전 (5월 중 / 최소 2주 전)</div>
+<div class="prep-card">
+  <div class="prep-head" style="background:#c0392b;"><div class="prep-title">공통 필수 — 착수 전 2주 내 완료 목표</div></div>
+  <div class="prep-body">
+    <ul class="ck">
+      <li><strong>[즉시] RFP 및 제안서 배포·숙지</strong> — 발주처로부터 RFP, 제안서, 구축요건정의서 수령. 전 인원에게 배포. PL 이동희가 핵심 요건 요약본 1페이지 작성하여 공유</li>
+      <li><strong>[즉시] 사업 킥오프 사전 브리핑 자료 작성</strong> — 사업 배경·목표·범위·일정·역할 개요를 담은 내부 브리핑 자료(PPT 10장 이내). 이동희·장용욱 공동 작성</li>
+      <li><strong>[즉시] 현행(AS-IS) 시스템 분석 자료 확보</strong> — 현행 비대면 상품 시스템 화면목록, DB 스키마, API 목록, 업무 흐름도 수령 요청(발주처). 미확보 시 분석 단계 첫 1개월 역엔지니어링 소요</li>
+      <li><strong>[착수 전] 피그마 디자인 시스템 제공 일정 확인</strong> — 개인뱅킹 UXUI팀으로부터 스토리보드 최초 제공 예정일 확인. 미확정 시 화면 분석 착수 불가 통보</li>
+      <li><strong>[착수 전] 대면 코어뱅킹 업무팀 연락망 확보</strong> — 공통/수신/여신/상품팀 담당자 연락처·협의 채널 설정. 분석 착수 즉시 첫 협의 요청</li>
+      <li><strong>[착수 전] 기술공통팀 BackEnd 소스 자동변환 Tool 교육 일정 확정</strong> — 교육 미수령 시 BackEnd 변환 착수 불가. 개발 단계 이전 교육 완료 목표로 일정 협의</li>
+      <li><strong>[착수 전] React 사전 학습 계획 수립</strong> — JSP→React 전환이므로 초·중급 개발자 React 기초 학습 필요. 사내 교육자료 또는 온라인 강좌 자료 공유(개발팀 착수 2주 전)</li>
+      <li><strong>[착수 전] TBD 7명 채용 공고 게시</strong> — 수신(3명), 신탁(1명), 퇴직연금(1명), 펀드(1명), 수신/외환(1명). React 경험자 우선. 9월 확정 목표</li>
+      <li><strong>[착수 전] SK 5명 이탈 공백 보완 계획 수립</strong> — 수신 고급 1명, 퇴직연금 고급 1명 대체 방안 발주처·KBDS 협의. 9월 전 확정 목표</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec">공통 — 착수 직후 1개월 (6월)</div>
+<div class="prep-card">
+  <div class="prep-head" style="background:#e67e22;"><div class="prep-title">착수 직후 1개월 내 완료 — 분석 기반 확보</div></div>
+  <div class="prep-body">
+    <ul class="ck">
+      <li><strong>[D+1주] 팀 내부 킥오프 미팅</strong> — 역할·책임 명확화, 비개발 역할 Assignment(PL·부PL·서브PL 지정), 보고 채널 설정, 주간 스탠드업 케이던스 결정</li>
+      <li><strong>[D+1주] 부PL·서브PL 지정 공식화</strong> — 부PL: 장용욱 / 서브PL: 최재덕(수신), 이현주(퇴직연금), 오성균(신탁), 최정일(펀드) 공식 지정</li>
+      <li><strong>[D+2주] 대면 코어뱅킹 업무팀 1차 협의</strong> — 비대면 상품 서비스 요청 데이터 목록 초안 협의. 수신 원장 API, 여신 심사 결과 API, 상품 코드/금리/한도 조회 API 우선순위 정의</li>
+      <li><strong>[D+2주] 현행 AS-IS 상품 화면 및 업무 흐름 파악</strong> — 상품별(수신·퇴직연금·펀드·신탁·보험) 현행 화면 30분 시연 수령. AS-IS 분석 문서 공동 작성 착수</li>
+      <li><strong>[D+3주] PMO 보고 체계 설정</strong> — 주간보고 템플릿 수령·확정, 월간보고 기준 확인, 이슈·리스크 로그 시스템 등록</li>
+      <li><strong>[D+4주] 상품별 분석 범위 확정 및 1차 기능 목록 작성</strong> — 수신·퇴직연금·펀드·신탁·보험/골드·수신/외환 각각 분석 완료 기준 명시. 피그마 스토리보드 수령 일정 재확인</li>
+    </ul>
+  </div>
+</div>
+
+<div class="sec">인력별 착수 전·후 우선 작업</div>
+
+<div class="box">
+  <div class="box-t">인력별 착수 전·후 우선 작업 매트릭스</div>
+  <table class="tbl">
+    <thead><tr><th>성명</th><th>등급·역할</th><th>착수 전 (5월 중) 우선 작업</th><th>착수 직후 1개월 (6월) 우선 작업</th><th>착수 2~3개월 (7~8월) 주요 작업</th></tr></thead>
+    <tbody>
+      <tr style="background:#fff0f0;">
+        <td><b>이동희</b></td><td><span class="g-te">특급</span><br>PL 총괄</td>
+        <td>RFP·제안서 정독(전체). 사업 요약 브리핑 자료 작성. 대면팀·기술공통 담당자 연락망 확보. 부PL(장용욱) 지정 준비. 수신/외환 TBD-4 관리 역할 최재덕으로 이관 결정</td>
+        <td>팀 킥오프 주관. PMO 보고 체계 설정. 대면 코어뱅킹 업무팀 협의 총괄. 부PL·서브PL 역할 공식화. 비개발 20% Time-boxing 적용 선언</td>
+        <td>분석 총괄 리드. 단계별 보고서 초안 작성. 이슈 로그 운영. TBD 채용 진척 모니터링</td>
+      </tr>
+      <tr>
+        <td><b>장용욱</b></td><td><span class="g-hi">고급</span><br>공통·부PL</td>
+        <td>RFP 공통 영역 정독. 채널공통 IF 관련 현행 자료 요청. 선도개발 참여 일정 파악</td>
+        <td>공통 AS-IS 분석 착수. 채널공통팀 1차 협의. AI솔루션팀 초기템플릿 수령 일정 확인. 부PL 역할 수행</td>
+        <td>공통 기능명세서 작성 착수. 선도개발 참여(개발 착수 2개월 전). React 코드 리뷰 체계 수립</td>
+      </tr>
+      <tr>
+        <td><b>황찬우</b></td><td><span class="g-hi">고급</span><br>공통</td>
+        <td>기술공통 아키텍처 현황 파악. 클라우드·PaaS 환경 기본 학습</td>
+        <td>기술공통 아키텍처 기준서 수령. 보안 적용 가이드 수령. 선도개발 참여</td>
+        <td>공통 API 설계서 작성. BackEnd 변환 Tool 교육 수강. 보안 검토 대응</td>
+      </tr>
+      <tr style="background:#fff5f5;">
+        <td><b>최재덕</b></td><td><span class="g-hi">고급</span><br>수신 리더</td>
+        <td>수신 RFP 요건 정독. 현행 수신 화면·업무흐름 파악 자료 요청. <b>수신/외환 TBD-4 관리 역할 이관 수락(이동희→최재덕)</b></td>
+        <td>수신 AS-IS 분석 착수. 대면 수신팀과 수신 원장 API 협의 1차. 수신/외환 인터페이스 정의서 초안 작성(TBD-4 온보딩 대비)</td>
+        <td>수신 기능명세서 작성. TBD-1(중급) 확정 후 공동 작성. 피그마 수신화면 시나리오 협의</td>
+      </tr>
+      <tr>
+        <td class="tbd">TBD-1~3</td><td><span class="g-md">중급</span>/<span class="g-lo">초급</span><br>수신 개발</td>
+        <td>9월 확정 목표 — 채용 공고 즉시 게시(8월 중). React 경험자 우선</td>
+        <td>확정 후: 수신 도메인 온보딩(2일), React 기초 교육(1일), 수신 기능명세서 공동 작성 착수</td>
+        <td>수신 Front React 개발 착수. AI템플릿 활용. 최재덕 코드리뷰 주 1회</td>
+      </tr>
+      <tr>
+        <td class="tbd">TBD-4</td><td><span class="g-lo">초급</span><br>수신/외환</td>
+        <td>9월 확정 목표. 최재덕이 수신/외환 인터페이스 정의서 선행 작성 준비</td>
+        <td>확정 후: 외환 도메인 교육(환율API, 외국환거래법, 해외송금). 최재덕 인수인계 패키지 수령</td>
+        <td>수신/외환 Front 개발 착수. 최재덕 직접 멘토링</td>
+      </tr>
+      <tr style="background:#fff5f5;">
+        <td><b>이현주</b></td><td><span class="g-hi">고급</span><br>퇴직연금 리더</td>
+        <td>퇴직연금 RFP 요건 정독(DC·DB·IRP). 현행 퇴직연금 화면·흐름 파악 자료 요청. SK 3명 이탈 현황 파악 및 보완 방안 이동희와 협의</td>
+        <td>퇴직연금 AS-IS 분석 착수. 대면 여신·상품팀과 연금 관련 API 협의. DC/DB/IRP 법규 변경 사항 검토. 김형일에게 Front 개발 리더십 이전 협의</td>
+        <td>퇴직연금 기능명세서 주도. 법규 검토 월 1회 정례화. TBD-6 온보딩 준비</td>
+      </tr>
+      <tr>
+        <td><b>김형일</b></td><td><span class="g-hi">고급</span><br>퇴직연금</td>
+        <td>퇴직연금 Front 기술 현황 파악. React 학습 계획 수립</td>
+        <td>퇴직연금 Front 개발 리더십 수임. API 설계서 작성 착수. BackEnd 변환 Tool 교육 수강</td>
+        <td>퇴직연금 React 선도개발 참여. 단위테스트 기준 정의</td>
+      </tr>
+      <tr>
+        <td><b>오성균</b></td><td><span class="g-hi">고급</span><br>신탁/ISA 리더</td>
+        <td>신탁 RFP 요건 정독(신탁업법). 신탁 AS-IS 화면·흐름 자료 요청</td>
+        <td>신탁 AS-IS 분석 착수. 신탁업법 법규 검토 착수. 초급 3명 멘토링 계획 수립</td>
+        <td>신탁 기능명세서 주도. 이시용 이행 M/M 조정 요청. TBD-5 온보딩 준비</td>
+      </tr>
+      <tr>
+        <td><b>최정일</b></td><td><span class="g-hi">고급</span><br>펀드/ISA 리더</td>
+        <td>펀드·ISA RFP 요건 정독(자본시장법·ISA). AS-IS 자료 요청</td>
+        <td>펀드 AS-IS 분석. 대면 상품팀과 펀드 코드·수익률 API 협의 1차</td>
+        <td>펀드 기능명세서 주도. TBD-7 온보딩 준비. React 코드리뷰 주 1회</td>
+      </tr>
+      <tr>
+        <td><b>이규호</b></td><td><span class="g-hi">고급</span><br>보험/골드 리더</td>
+        <td>보험·골드 RFP 요건 정독. 보험사·한국금거래소 API 현황 파악</td>
+        <td>보험 AS-IS 분석. 외부기관 연동 담당자 연락망 확보</td>
+        <td>보험·골드 기능명세서 작성. 외부기관 API 협의</td>
+      </tr>
+      <tr style="background:#fff0f0;">
+        <td><b>황명환</b></td><td><span class="g-te">특급</span><br>C2 대출 리더</td>
+        <td>대출 RFP 요건 전체 정독. 12개 대출 상품 현행 화면·흐름 자료 요청. 선행 요건정의 수행 계약 범위 조정 발주처 협의 착수</td>
+        <td><b>8~10월 선행 요건정의 수행 시작</b>. 대면 여신팀과 대출 심사결과·한도 API 협의 1차. 주택도시기금·부동산 대출 요건정의서 우선 작성(가장 위험도 높음)</td>
+        <td>전체 대출 요건정의서 완성. 현업 협의 월 2회 정례화. 법규 모니터링 루틴 설정</td>
+      </tr>
+      <tr>
+        <td><b>김도훈</b></td><td><span class="g-hi">고급</span><br>대출 개발 부리더</td>
+        <td>개발 부리더 역할 공식 수임. 대출 BackEnd 전환 Tool 교육 일정 확인</td>
+        <td>대출 공통 BackEnd 변환 계획 수립. 채널공통 IF 협의 참여. 대면 상품팩토링팀 담당자 연락망 확보</td>
+        <td>BackEnd 변환 Tool 교육 수강. 대출 전환 소스 품질점검 기준 수립. 상품팩토링 연동 요건 초안 작성</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="rn info"><strong>💡 착수 초기 핵심 원칙</strong>경험 부족 상황이므로, 분석 단계 처음 2개월(6~7월)은 <b>개발보다 도메인 이해와 현행 파악에 집중</b>해야 합니다. "빨리 만들기"보다 "정확히 이해하기"가 전체 19개월 일정 준수의 핵심입니다. PL(이동희)이 매주 전체 도메인 공유 세션(30분)을 운영하고, 발주처 현업 담당자와의 월 2회 정례 협의를 착수 즉시 설정하는 것을 강력 권고합니다.</div>
+</div><!-- /panel-kickoff -->
+
+<!-- ============================================================ TAB 3: C1 비대출 상세 -->
+<div id="panel-c1detail" class="panel">
+<div class="m6">
+  <div class="mc"><div class="l">C1 인원(조정후)</div><div class="v" style="color:#3266ad">25명</div><div class="s">SK5명 제외</div></div>
+  <div class="mc"><div class="l">C1 총M/M</div><div class="v" style="color:#3266ad">361.0</div></div>
+  <div class="mc"><div class="l">비개발 합계</div><div class="v" style="color:#c0392b">105.5</div><div class="s">자체69+타팀36.5(29.2%)</div></div>
+  <div class="mc"><div class="l">순개발 가용</div><div class="v">255.5</div><div class="s">70.8%</div></div>
+  <div class="mc"><div class="l">TBD 미확정</div><div class="v" style="color:#e24b4a">7명</div><div class="s">88 M/M 공백</div></div>
+  <div class="mc"><div class="l">SK이탈 공백</div><div class="v" style="color:#e24b4a">77 M/M</div><div class="s">수신·퇴직연금 고급</div></div>
+</div>
+
+<div class="box">
+  <div class="box-t">C1 인력별 개발/비개발 공수 분리 및 지원 역할 명시 — 25명 전체</div>
+  <div style="overflow-x:auto;">
+  <table class="ctbl">
+    <thead>
+      <tr>
+        <th style="min-width:90px;">성명·등급</th>
+        <th>담당</th>
+        <th class="r">분석</th><th class="r">설계</th><th class="r">개발</th><th class="r">통합</th><th class="r">이행</th><th class="r">안정</th><th class="r">합계</th>
+        <th class="r">비개발율</th><th class="r" style="color:#c0392b;">비개발MM</th><th class="r" style="color:#185fa5;">순개발MM</th>
+        <th style="min-width:260px;">지원 역할 및 겸임 사항</th><th>부담</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="overload">
+        <td class="name-grade"><b>이동희</b><br><span class="g-te">특급</span></td><td>PL 총괄</td>
+        <td class="r">3.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r"><b>18.0</b></td>
+        <td class="r">50%</td><td class="r mgmt-cell">9.0</td><td class="r dev-cell">9.0</td>
+        <td>팀 전체 보고 주관, 기술공통·UXUI·독립형 협의 총괄, 이슈 에스컬레이션, 이행 상황실. <b>부PL: 장용욱 지정. 수신/외환 TBD-4 관리 역할 → 최재덕에게 이관</b></td>
+        <td><span class="badge b-r">과부하</span></td>
+      </tr>
+      <tr>
+        <td class="name-grade"><b>장용욱</b><br><span class="g-hi">고급</span></td><td>공통·부PL</td>
+        <td class="r">3.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r"><b>19.0</b></td>
+        <td class="r">33%</td><td class="r mgmt-cell">6.3</td><td class="r dev-cell">12.7</td>
+        <td>부PL 수행(PL 부재 대행). 채널공통 IF 협의 주도. AI추천 IF 정의. 선도개발 대표 참여</td>
+        <td><span class="badge b-o">높음</span></td>
+      </tr>
+      <tr>
+        <td class="name-grade"><b>황찬우</b><br><span class="g-hi">고급</span></td><td>공통</td>
+        <td class="r">3.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r"><b>18.0</b></td>
+        <td class="r">33%</td><td class="r mgmt-cell">5.9</td><td class="r dev-cell">12.1</td>
+        <td>보안 적용 대응, 클라우드·PaaS 파이프라인 적용, UXUI 검수, BackEnd 변환 Tool 교육 수강 후 공통 소스 변환 주도</td>
+        <td><span class="badge b-o">높음</span></td>
+      </tr>
+      <tr>
+        <td class="name-grade">조영선<br><span class="g-md">중급</span></td><td>공통</td>
+        <td class="r">0.0</td><td class="r">2.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">13.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">1.9</td><td class="r dev-cell">11.1</td>
+        <td>RTM 유지, 회의록, 형상관리. 공통 BackEnd 소스 변환·점검 보조</td>
+        <td><span class="badge b-g">적정</span></td>
+      </tr>
+      <tr style="background:#fff5f5;">
+        <td class="name-grade"><b>최재덕</b><br><span class="g-hi">고급</span></td><td>수신 리더</td>
+        <td class="r">3.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r"><b>19.0</b></td>
+        <td class="r">28%</td><td class="r mgmt-cell">5.3</td><td class="r dev-cell">13.7</td>
+        <td><b>SK 2명 이탈로 단독 수신 고급 체제. 수신/외환 TBD-4 관리 역할 명시(이동희에서 이관). 수신 현행 시스템 파악 및 기능명세서 주도. 대면 수신팀 API 협의.</b></td>
+        <td><span class="badge b-r">과부하</span></td>
+      </tr>
+      <tr class="tbd">
+        <td class="name-grade"><b>TBD-1</b><br><span class="g-md">중급</span></td><td>수신 개발</td>
+        <td class="r">0.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">14.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">2.1</td><td class="r dev-cell">11.9</td>
+        <td>9월 확정. React 경험자 우선. 수신 기능명세서 공동 작성. 온보딩 2일+선도개발 참여</td>
+        <td><span class="badge b-y">TBD</span></td>
+      </tr>
+      <tr class="tbd">
+        <td class="name-grade"><b>TBD-2</b><br><span class="g-lo">초급</span></td><td>수신 개발</td>
+        <td class="r">0.0</td><td class="r">2.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">13.0</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.3</td><td class="r dev-cell">11.7</td>
+        <td>9월 확정. AI솔루션 초기템플릿 활용 Front 개발. 최재덕 멘토링</td>
+        <td><span class="badge b-y">TBD</span></td>
+      </tr>
+      <tr class="tbd">
+        <td class="name-grade"><b>TBD-3</b><br><span class="g-lo">초급</span></td><td>수신 개발</td>
+        <td class="r">0.0</td><td class="r">2.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">13.0</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.3</td><td class="r dev-cell">11.7</td>
+        <td>9월 확정. BackEnd 소스 변환·점검 보조 역할</td>
+        <td><span class="badge b-y">TBD</span></td>
+      </tr>
+      <tr class="tbd">
+        <td class="name-grade"><b>TBD-4</b><br><span class="g-lo">초급</span></td><td>수신/외환</td>
+        <td class="r">0.0</td><td class="r">0.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r">12.0</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.2</td><td class="r dev-cell">10.8</td>
+        <td>수신/외환 전담. <b>최재덕이 수신/외환 인터페이스 정의서 선행 작성 후 인수인계.</b> 외환 도메인 교육 필수(환율API·외국환거래법)</td>
+        <td><span class="badge b-y">TBD</span></td>
+      </tr>
+      <tr style="background:#fffdf0;">
+        <td class="name-grade"><b>오성균</b><br><span class="g-hi">고급</span></td><td>신탁/ISA 리더</td>
+        <td class="r">2.5</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r"><b>17.5</b></td>
+        <td class="r">28%</td><td class="r mgmt-cell">4.9</td><td class="r dev-cell">12.6</td>
+        <td>신탁 기능명세서 주도. 신탁업법 법규검토. 초급 3명 멘토링. <b>이시용 이행 0.5→1.5M/M 조정 요청</b></td>
+        <td><span class="badge b-o">높음</span></td>
+      </tr>
+      <tr><td class="name-grade">이병희<br><span class="g-lo">초급</span></td><td>신탁</td>
+        <td class="r">0.0</td><td class="r">2.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">13.5</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.4</td><td class="r dev-cell">12.1</td>
+        <td>신탁 Front React 개발(AI템플릿). BackEnd 변환 점검 보조</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr><td class="name-grade">이시용<br><span class="g-lo">초급</span></td><td>신탁</td>
+        <td class="r">0.0</td><td class="r">2.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">0.5</td><td class="r">0.0</td><td class="r">12.5</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.2</td><td class="r dev-cell">11.3</td>
+        <td>BackEnd 변환 점검. <b>이행 0.5→1.5M/M 조정 강력 권고</b></td><td><span class="badge b-y">주의</span></td></tr>
+      <tr class="tbd"><td class="name-grade"><b>TBD-5</b><br><span class="g-lo">초급</span></td><td>신탁</td>
+        <td class="r">0.0</td><td class="r">0.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r">12.0</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.2</td><td class="r dev-cell">10.8</td>
+        <td>9월 확정. 오성균 신탁 인터페이스 정의서 선행 작성 후 인수인계 필수</td><td><span class="badge b-y">TBD</span></td></tr>
+      <tr style="background:#fff5f5;">
+        <td class="name-grade"><b>이현주</b><br><span class="g-hi">고급</span></td><td>퇴직연금 리더</td>
+        <td class="r">2.5</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r"><b>17.5</b></td>
+        <td class="r">28%</td><td class="r mgmt-cell">4.9</td><td class="r dev-cell">12.6</td>
+        <td><b>SK 3명 이탈로 단독 분석 리더십. 법규검토·현업협의·요건정의 집중. Front 개발 리더십은 김형일에게 이전.</b> 안정화 1M/M 추가 배치 필요</td>
+        <td><span class="badge b-r">과부하</span></td>
+      </tr>
+      <tr><td class="name-grade">김형일<br><span class="g-hi">고급</span></td><td>퇴직연금</td>
+        <td class="r">0.0</td><td class="r">1.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">12.0</td>
+        <td class="r">28%</td><td class="r mgmt-cell">3.4</td><td class="r dev-cell">8.6</td>
+        <td>퇴직연금 Front 개발 리더십 수임(이현주 이전). API 설계서 작성. BackEnd 변환 Tool 교육 수강</td>
+        <td><span class="badge b-y">보통</span></td>
+      </tr>
+      <tr><td class="name-grade">문학일<br><span class="g-md">중급</span></td><td>퇴직연금</td>
+        <td class="r">0.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">0.0</td><td class="r">0.0</td><td class="r">13.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">1.9</td><td class="r dev-cell">11.1</td>
+        <td>BackEnd 소스 변환·점검. RTM 유지. <b>이행 0→1M/M 연장 계약 권고</b></td>
+        <td><span class="badge b-y">주의</span></td>
+      </tr>
+      <tr><td class="name-grade">박은탁<br><span class="g-lo">초급</span></td><td>퇴직연금</td>
+        <td class="r">0.0</td><td class="r">0.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">11.0</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.1</td><td class="r dev-cell">9.9</td>
+        <td>AI템플릿 기반 Front 개발. 이현주 지도</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr class="tbd"><td class="name-grade"><b>TBD-6</b><br><span class="g-lo">초급</span></td><td>퇴직연금</td>
+        <td class="r">0.0</td><td class="r">0.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r">12.0</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.2</td><td class="r dev-cell">10.8</td>
+        <td>9월 확정. 이현주 선행 설계서 기반 개발</td><td><span class="badge b-y">TBD</span></td></tr>
+      <tr><td class="name-grade"><b>최정일</b><br><span class="g-hi">고급</span></td><td>펀드/ISA 리더</td>
+        <td class="r">2.5</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r"><b>16.5</b></td>
+        <td class="r">28%</td><td class="r mgmt-cell">4.6</td><td class="r dev-cell">11.9</td>
+        <td>펀드·ISA 기능명세서 주도. 자본시장법·ISA법 법규검토. 중급 3명 멘토링. 피그마 화면 검수</td>
+        <td><span class="badge b-o">높음</span></td>
+      </tr>
+      <tr><td class="name-grade">정현우<br><span class="g-md">중급</span></td><td>펀드</td>
+        <td class="r">0.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r">16.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">2.4</td><td class="r dev-cell">13.6</td>
+        <td>펀드 API 설계서. React Front 개발. 테스트 시나리오</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr><td class="name-grade">유소은<br><span class="g-md">중급</span></td><td>ISA</td>
+        <td class="r">0.0</td><td class="r">2.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">13.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">1.9</td><td class="r dev-cell">11.1</td>
+        <td>ISA 설계서 보조. Front 개발</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr><td class="name-grade">황윤호<br><span class="g-md">중급</span></td><td>ISA</td>
+        <td class="r">0.0</td><td class="r">2.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">13.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">1.9</td><td class="r dev-cell">11.1</td>
+        <td>테스트 시나리오. BackEnd 소스 변환·점검</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr class="tbd"><td class="name-grade"><b>TBD-7</b><br><span class="g-lo">초급</span></td><td>펀드</td>
+        <td class="r">0.0</td><td class="r">0.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r">12.0</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.2</td><td class="r dev-cell">10.8</td>
+        <td>9월 확정. AI템플릿 Front 개발. 최정일 멘토링</td><td><span class="badge b-y">TBD</span></td></tr>
+      <tr><td class="name-grade"><b>이규호</b><br><span class="g-hi">고급</span></td><td>보험/골드 리더</td>
+        <td class="r">2.5</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r"><b>16.5</b></td>
+        <td class="r">28%</td><td class="r mgmt-cell">4.6</td><td class="r dev-cell">11.9</td>
+        <td>보험·골드 기능명세서. 외부기관(보험사·한국금거래소) API 연동 협의. 피그마 화면 검수</td>
+        <td><span class="badge b-y">보통</span></td>
+      </tr>
+      <tr><td class="name-grade">오동현<br><span class="g-md">중급</span></td><td>보험</td>
+        <td class="r">0.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">14.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">2.1</td><td class="r dev-cell">11.9</td>
+        <td>보험 Front React 개발. 통합테스트 시나리오 작성</td><td><span class="badge b-g">적정</span></td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="8"><b>C1 합계</b></td><td class="r"><b>361.0</b></td>
+        <td class="r">평균 22%</td><td class="r mgmt-cell"><b>74.2</b></td><td class="r dev-cell"><b>286.8</b></td><td colspan="2"></td></tr>
+    </tfoot>
+  </table>
+  </div>
+</div>
+</div><!-- /panel-c1detail -->
+
+<!-- ============================================================ TAB 4: C2 대출 상세 -->
+<div id="panel-c2detail" class="panel">
+<div class="m6">
+  <div class="mc"><div class="l">C2 인원</div><div class="v" style="color:#ba7517">18명</div><div class="s">전원 비디</div></div>
+  <div class="mc"><div class="l">C2 총M/M</div><div class="v" style="color:#ba7517">205.0</div></div>
+  <div class="mc"><div class="l">비개발 합계</div><div class="v" style="color:#c0392b">73.0</div><div class="s">자체47+타팀26(35.6%)</div></div>
+  <div class="mc"><div class="l">순개발 가용</div><div class="v">132.0</div><div class="s">64.4%</div></div>
+  <div class="mc"><div class="l">분석 0M/M</div><div class="v" style="color:#e24b4a">보완 필요</div><div class="s">황명환 선행 투입</div></div>
+  <div class="mc"><div class="l">통합 비중</div><div class="v" style="color:#e67e22">43.9%</div><div class="s">권장 상한 초과</div></div>
+</div>
+
+<div class="box">
+  <div class="box-t">C2 인력별 개발/비개발 공수 분리 및 지원 역할 명시 — 18명 전체 (전원 비디)</div>
+  <div style="overflow-x:auto;">
+  <table class="ctbl">
+    <thead>
+      <tr>
+        <th style="min-width:90px;">성명·등급</th><th>담당</th>
+        <th class="r">설계</th><th class="r">개발</th><th class="r">통합</th><th class="r">이행</th><th class="r">안정화</th><th class="r">합계</th>
+        <th class="r">비개발율</th><th class="r" style="color:#c0392b;">비개발MM</th><th class="r" style="color:#185fa5;">순개발MM</th>
+        <th style="min-width:240px;">지원 역할 및 대응 사항</th><th>부담</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="overload">
+        <td class="name-grade"><b>황명환</b><br><span class="g-te">특급</span></td><td>대출 리더</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.5</td><td class="r">0.0</td><td class="r"><b>12.0</b></td>
+        <td class="r">50%</td><td class="r mgmt-cell">6.0</td><td class="r dev-cell">6.0</td>
+        <td><b>분석 0M/M 보완: 8~10월 선행 요건정의 수행(계약 범위 조정 필요). 팀 보고·법규검토·현업협의 전담. 순개발 6M/M → 김도훈 개발 부리더 지정 필수. 주택도시기금·부동산 요건정의 우선 작성</b></td>
+        <td><span class="badge b-r">과부하</span></td>
+      </tr>
+      <tr class="overload">
+        <td class="name-grade"><b>김상진</b><br><span class="g-te">특급</span></td><td>대출 공통</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.5</td><td class="r">0.0</td><td class="r"><b>12.0</b></td>
+        <td class="r">45%</td><td class="r mgmt-cell">5.4</td><td class="r dev-cell">6.6</td>
+        <td>AI추천 API 연동 협의. 대출 공통 기능명세서 주도. BackEnd 소스 변환·품질점검</td>
+        <td><span class="badge b-r">과부하</span></td>
+      </tr>
+      <tr>
+        <td class="name-grade"><b>국정근</b><br><span class="g-te">특급</span></td><td>전월세 대출</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r"><b>12.5</b></td>
+        <td class="r">45%</td><td class="r mgmt-cell">5.6</td><td class="r dev-cell">6.9</td>
+        <td>보증기관(HUG·HF) 연동 협의. 전월세 기능명세서. 주택금융업법 법규검토</td>
+        <td><span class="badge b-o">높음</span></td>
+      </tr>
+      <tr>
+        <td class="name-grade"><b>김도훈</b><br><span class="g-hi">고급</span></td><td>대출관리공통·부리더</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.5</td><td class="r">0.0</td><td class="r"><b>12.0</b></td>
+        <td class="r">33%</td><td class="r mgmt-cell">4.0</td><td class="r dev-cell">8.0</td>
+        <td><b>개발 부리더(황명환 지정). 대출 BackEnd 소스 변환 총괄. 채널공통 IF 대응. 대면 상품팩토링·API Hub 연동 요건 조율</b></td>
+        <td><span class="badge b-o">높음</span></td>
+      </tr>
+      <tr><td class="name-grade">장대현<br><span class="g-hi">고급</span></td><td>전월세 대출</td>
+        <td class="r">1.0</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">1.0</td><td class="r">0.0</td><td class="r">12.0</td>
+        <td class="r">28%</td><td class="r mgmt-cell">3.4</td><td class="r dev-cell">8.6</td>
+        <td>전월세 현업 협의. 보증 연동 시나리오. Front React 개발</td><td><span class="badge b-o">높음</span></td></tr>
+      <tr><td class="name-grade">정세진<br><span class="g-hi">고급</span></td><td>집단대출</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r">13.5</td>
+        <td class="r">28%</td><td class="r mgmt-cell">3.8</td><td class="r dev-cell">9.7</td>
+        <td>집단대출 기능명세서. 시행사 연동 협의. Front React 리더</td><td><span class="badge b-o">높음</span></td></tr>
+      <tr><td class="name-grade">정석재<br><span class="g-hi">고급</span></td><td>집단대출</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r">13.5</td>
+        <td class="r">28%</td><td class="r mgmt-cell">3.8</td><td class="r dev-cell">9.7</td>
+        <td>테스트 시나리오. FE연동 검증. BackEnd 소스 변환·점검</td><td><span class="badge b-y">보통</span></td></tr>
+      <tr><td class="name-grade">김동조<br><span class="g-hi">고급</span></td><td>신용 대출</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r">13.5</td>
+        <td class="r">28%</td><td class="r mgmt-cell">3.8</td><td class="r dev-cell">9.7</td>
+        <td>CB연동 협의. DSR규정 법규검토. 신용 기능명세서. 이수연 멘토링</td><td><span class="badge b-o">높음</span></td></tr>
+      <tr><td class="name-grade">변지환<br><span class="g-hi">고급</span></td><td>예금담보</td>
+        <td class="r">0.5</td><td class="r">5.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r">13.5</td>
+        <td class="r">28%</td><td class="r mgmt-cell">3.8</td><td class="r dev-cell">9.7</td>
+        <td>예금담보 기능명세서. 담보설정 프로세스 협의</td><td><span class="badge b-y">보통</span></td></tr>
+      <tr><td class="name-grade">송재용<br><span class="g-hi">고급</span></td><td>예금담보</td>
+        <td class="r">0.0</td><td class="r">3.5</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r">11.5</td>
+        <td class="r">28%</td><td class="r mgmt-cell">3.2</td><td class="r dev-cell">8.3</td>
+        <td>BackEnd 소스 변환 점검. 단위테스트 기준</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr style="background:#fff5f5;">
+        <td class="name-grade"><b>문선희</b><br><span class="g-hi">고급</span></td><td>주택도시기금</td>
+        <td class="r">0.0</td><td class="r">3.5</td><td class="r">5.0</td><td class="r">0.5</td><td class="r">0.0</td><td class="r">9.0</td>
+        <td class="r">28%</td><td class="r mgmt-cell">2.5</td><td class="r dev-cell">6.5</td>
+        <td><b>분析·설계 0M/M. 황명환 요건정의서 수령 후 개발 착수. 이행 0.5→1.5M/M 조정 필수. 기금API Mock서버 조기 구성</b></td>
+        <td><span class="badge b-r">고위험</span></td>
+      </tr>
+      <tr style="background:#fff5f5;">
+        <td class="name-grade"><b>유현석</b><br><span class="g-hi">고급</span></td><td>주택도시기금</td>
+        <td class="r">0.0</td><td class="r">4.5</td><td class="r">5.0</td><td class="r">0.5</td><td class="r">0.0</td><td class="r">10.0</td>
+        <td class="r">28%</td><td class="r mgmt-cell">2.8</td><td class="r dev-cell">7.2</td>
+        <td><b>황명환 요건정의서 기반 개발. 이행 0.5→1.5M/M 조정 권고</b></td>
+        <td><span class="badge b-r">고위험</span></td>
+      </tr>
+      <tr style="background:#fff5f5;">
+        <td class="name-grade"><b>송현민</b><br><span class="g-hi">고급</span></td><td>부동산 대출</td>
+        <td class="r">0.0</td><td class="r">3.5</td><td class="r">5.0</td><td class="r">0.5</td><td class="r">0.0</td><td class="r">9.0</td>
+        <td class="r">28%</td><td class="r mgmt-cell">2.5</td><td class="r dev-cell">6.5</td>
+        <td><b>단독 1인. 분석·설계 0M/M. 황명환 요건정의 + 집단대출팀 연계 지원 명시. 이행 0.5→1.5M/M 조정 필수</b></td>
+        <td><span class="badge b-r">고위험</span></td>
+      </tr>
+      <tr><td class="name-grade">이현종<br><span class="g-md">중급</span></td><td>개인사업자</td>
+        <td class="r">0.0</td><td class="r">3.5</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">1.0</td><td class="r">11.5</td>
+        <td class="r">15%</td><td class="r mgmt-cell">1.7</td><td class="r dev-cell">9.8</td>
+        <td>RTM 유지. 회의록. Front React 개발</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr><td class="name-grade">홍성민<br><span class="g-md">중급</span></td><td>자동차 대출</td>
+        <td class="r">0.0</td><td class="r">4.0</td><td class="r">5.0</td><td class="r">0.5</td><td class="r">0.0</td><td class="r">9.5</td>
+        <td class="r">15%</td><td class="r mgmt-cell">1.4</td><td class="r dev-cell">8.1</td>
+        <td>형상관리. Front React 개발. 캐피탈사 API → 황명환 요건정의서 기반</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr><td class="name-grade">박재현<br><span class="g-md">중급</span></td><td>장기카드대출</td>
+        <td class="r">0.0</td><td class="r">3.0</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r">10.0</td>
+        <td class="r">15%</td><td class="r mgmt-cell">1.5</td><td class="r dev-cell">8.5</td>
+        <td>테스트 결과서. 카드사 연동 Front 개발</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr><td class="name-grade">이수연<br><span class="g-lo">초급</span></td><td>신용 대출</td>
+        <td class="r">0.0</td><td class="r">3.5</td><td class="r">5.0</td><td class="r">2.0</td><td class="r">0.0</td><td class="r">10.5</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.1</td><td class="r dev-cell">9.4</td>
+        <td>AI템플릿 기반 Front React 개발. 김동조 멘토링</td><td><span class="badge b-g">적정</span></td></tr>
+      <tr><td class="name-grade">이보라<br><span class="g-lo">초급</span></td><td>통합어드민</td>
+        <td class="r">0.0</td><td class="r">4.0</td><td class="r">5.0</td><td class="r">0.5</td><td class="r">0.0</td><td class="r">9.5</td>
+        <td class="r">10%</td><td class="r mgmt-cell">1.0</td><td class="r dev-cell">8.5</td>
+        <td>어드민 화면 Front 개발. 결함 로그 관리</td><td><span class="badge b-g">적정</span></td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="7"><b>C2 합계</b></td><td class="r"><b>205.0</b></td>
+        <td class="r">평균 28%</td><td class="r mgmt-cell"><b>57.3</b></td><td class="r dev-cell"><b>147.7</b></td><td colspan="2"></td></tr>
+    </tfoot>
+  </table>
+  </div>
+</div>
+</div><!-- /panel-c2detail -->
+
+<!-- ============================================================ TAB 5: 비개발 Effort -->
+<div id="panel-effort" class="panel">
+<div class="m4">
+  <div class="mc"><div class="l">타업무팀 대응 Effort</div><div class="v" style="color:#e67e22">77.5 M/M</div><div class="s">C1 44.5 + C2 33.0</div></div>
+  <div class="mc"><div class="l">자체 관리 Effort</div><div class="v" style="color:#c0392b">116.0 M/M</div><div class="s">C1 69.0 + C2 47.0</div></div>
+  <div class="mc"><div class="l">비개발 합계</div><div class="v" style="color:#8e44ad">193.5 M/M</div><div class="s">C1 113.5 + C2 80.0</div></div>
+  <div class="mc"><div class="l">순개발 가용</div><div class="v">372.5 M/M</div><div class="s">566.0 - 193.5</div></div>
+</div>
+
+<div class="box">
+  <div class="box-t">타업무팀 영향 Effort 상세 (대면 코어뱅킹 업무팀 포함)</div>
+  <table class="tbl">
+    <thead>
+      <tr><th>타업무팀</th><th>주요 영향 내용</th><th class="r" style="min-width:60px;">C1 대응<br>M/M</th><th class="r" style="min-width:60px;">C2 대응<br>M/M</th><th class="r" style="min-width:60px;">합계<br>M/M</th><th>집중 단계</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><b>대면 코어뱅킹 업무팀</b><br><small>공통/수신/여신/상품팀 등</small></td>
+        <td>비대면 상품 서비스에 필요한 정보 요청·수신 대응이 핵심. 수신 원장·여신 심사결과·상품 코드/금리/한도 API 요건 정의, API Hub/EDA/상품팩토링 연동 협의. <b>분석·설계 단계부터 가장 중요한 협업팀</b></td>
+        <td class="r">8.0</td><td class="r">7.0</td><td class="r"><b>15.0</b></td>
+        <td><span class="pill ph-an">분석</span><span class="pill ph-se">설계</span><span class="pill ph-de">개발</span><span class="pill ph-te">통합</span></td>
+      </tr>
+      <tr>
+        <td><b>기술공통</b><br><small>아키텍처·인프라·보안·제3자테스트</small></td>
+        <td>신규 아키텍처 기준 적용, <b>BackEnd 소스 자동변환 Tool 교육</b>, 독립형플랫폼(PaaS) 환경 대응, 보안검토, 제3자테스트 결과 대응, 이행관리 체크리스트</td>
+        <td class="r">12.0</td><td class="r">8.0</td><td class="r"><b>20.0</b></td>
+        <td><span class="pill ph-se">설계</span><span class="pill ph-de">개발</span><span class="pill ph-te">통합</span></td>
+      </tr>
+      <tr>
+        <td><b>독립형플랫폼</b><br><small>채널공통·FE·어드민·AI솔루션</small></td>
+        <td>채널공통 IF 변경 수신·반영, 비대면FE 연동 검증, 통합어드민 화면 협의, AI추천 API 연동, AI솔루션 초기템플릿 수령</td>
+        <td class="r">10.0</td><td class="r">7.0</td><td class="r"><b>17.0</b></td>
+        <td><span class="pill ph-se">설계</span><span class="pill ph-de">개발</span><span class="pill ph-te">통합</span></td>
+      </tr>
+      <tr>
+        <td><b>개인뱅킹 UXUI</b><br><small>스타뱅킹앱·인터넷뱅킹·피그마</small></td>
+        <td>피그마 스토리보드·퍼블리싱 결과물 수령→이벤트처리·데이터바인딩 개발, 화면 시나리오 협의, 디자인 시스템 변경 대응</td>
+        <td class="r">9.0</td><td class="r">7.0</td><td class="r"><b>16.0</b></td>
+        <td><span class="pill ph-se">설계</span><span class="pill ph-de">개발</span><span class="pill ph-te">통합</span></td>
+      </tr>
+      <tr>
+        <td><b>PMO</b><br><small>총괄PM·사업관리·품질관리</small></td>
+        <td>주간·월간보고 제출, 산출물 품질검토 대응, 이슈·리스크 등록·추적</td>
+        <td class="r">5.5</td><td class="r">4.0</td><td class="r"><b>9.5</b></td>
+        <td><span class="pill ph-an">전구간</span></td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr><td><b>타업무팀 영향 Effort 합계</b></td><td></td>
+        <td class="r"><b>44.5</b></td><td class="r"><b>33.0</b></td><td class="r"><b>77.5</b></td><td></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="box">
+  <div class="box-t">자체 관리 Effort 상세 — C1: 69.0 M/M, C2: 47.0 M/M, 합계: 116.0 M/M</div>
+  <table class="tbl">
+    <thead><tr><th>#</th><th>관리 유형</th><th>주요 Task</th><th class="r">C1 M/M</th><th class="r">C2 M/M</th><th class="r">합계</th><th>집중 단계</th><th>주담당</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><b>인력 투입·관리</b></td><td>TBD 7명 온보딩, 월별 투입/철수 조정, 역할 재배분, 팀 내 갈등 조율</td><td class="r">8.0</td><td class="r">3.0</td><td class="r"><b>11.0</b></td><td><span class="pill ph-se">설계</span><span class="pill ph-de">개발</span></td><td>PL·리더급</td></tr>
+      <tr><td>2</td><td><b>계획서·보고서 작성</b></td><td>착수계획서, 단계별 완료보고(6회), 주간보고(76건), 월간보고(19건), 이행·안정화 계획서</td><td class="r">9.5</td><td class="r">5.5</td><td class="r"><b>15.0</b></td><td><span class="pill ph-an">전구간</span></td><td>PL·리더급</td></tr>
+      <tr><td>3</td><td><b>요구사항 관리</b></td><td>요건 정의서(상품별), 현업 협의 회의(월2~3회), CR 접수·처리(월2건 추정), RTM 유지</td><td class="r">8.0</td><td class="r">6.0</td><td class="r"><b>14.0</b></td><td><span class="pill ph-an">분석</span><span class="pill ph-se">설계</span><span class="pill ph-de">개발</span></td><td>고급 리더</td></tr>
+      <tr><td>4</td><td><b>산출물 작성·관리</b></td><td>기능명세서, 화면설계서(상품 처리 프로세스 복잡도로 화면 수 예측 불가 — 참조), API설계서, 단위테스트결과서, 통합테스트 시나리오(처리 복잡도로 건수 예측 불가 — 참조), 운영이관문서</td><td class="r">11.0</td><td class="r">7.0</td><td class="r"><b>18.0</b></td><td><span class="pill ph-se">설계</span><span class="pill ph-de">개발</span></td><td>고급·중급</td></tr>
+      <tr><td>5</td><td><b>내부 회의</b></td><td>일일 스탠드업(19개월), 주간 팀 회의, 설계 리뷰, 코드 리뷰, 결함 분석 회의</td><td class="r">7.5</td><td class="r">4.5</td><td class="r"><b>12.0</b></td><td><span class="pill ph-an">전구간</span></td><td>전 인원</td></tr>
+      <tr><td>6</td><td><b>이슈·리스크 관리</b></td><td>이슈 로그 작성·추적, 리스크 완화 계획, 긴급 결함 대응, 에스컬레이션</td><td class="r">6.0</td><td class="r">4.0</td><td class="r"><b>10.0</b></td><td><span class="pill ph-de">개발</span><span class="pill ph-te">통합</span><span class="pill ph-ih">이행</span></td><td>PL·리더급</td></tr>
+      <tr><td>7</td><td><b>법규·규정 검토</b></td><td>금융소비자보호법·자본시장법·ISA법(C1) / 여신전문금융업법·주택금융업법·DSR(C2) 변경 모니터링</td><td class="r">4.0</td><td class="r">5.0</td><td class="r"><b>9.0</b></td><td><span class="pill ph-an">전구간</span></td><td>고급 리더</td></tr>
+      <tr><td>8</td><td><b>테스트 계획·관리</b></td><td>단위테스트 기준 정의, 통합 시나리오(처리 복잡도로 건수 예측 불가 — 참조), 결함 관리, UAT 지원</td><td class="r">5.5</td><td class="r">4.0</td><td class="r"><b>9.5</b></td><td><span class="pill ph-de">개발</span><span class="pill ph-te">통합</span></td><td>고급·중급</td></tr>
+      <tr><td>9</td><td><b>이행·컷오버 관리</b></td><td>이행 체크리스트 작성, 컷오버 시나리오 연습(3회), 데이터 정합성 사전 검증, 이행 당일 상황실</td><td class="r">3.5</td><td class="r">3.5</td><td class="r"><b>7.0</b></td><td><span class="pill ph-ih">이행</span></td><td>PL·리더급</td></tr>
+      <tr><td>10</td><td><b>운영 이관·교육</b></td><td>운영 매뉴얼(상품별), 운영팀 인수인계 교육, 결함 처리 절차서, FAQ</td><td class="r">3.0</td><td class="r">2.0</td><td class="r"><b>5.0</b></td><td><span class="pill ph-ih">이행</span><span class="pill ph-st">안정화</span></td><td>고급·중급</td></tr>
+      <tr><td>11</td><td><b>사업자 간 조율</b></td><td>SK(상품업무 Main 사업자)·KBDS(C1)·비디(C2) 업체 조율, 발주처 현업 협의, 다자간 회의 준비·진행, 의사결정 자료 배포</td><td class="r">3.0</td><td class="r">2.5</td><td class="r"><b>5.5</b></td><td><span class="pill ph-an">전구간</span></td><td>PL·리더급</td></tr>
+    </tbody>
+    <tfoot>
+      <tr><td colspan="3"><b>자체 관리 Effort 합계</b></td><td class="r"><b>69.0</b></td><td class="r"><b>47.0</b></td><td class="r"><b>116.0</b></td><td colspan="2"></td></tr>
+    </tfoot>
+  </table>
+</div>
+
+<div class="g2">
+  <div class="box"><div class="box-t">비개발 Effort 단계별 분포</div>
+    <div style="position:relative;height:210px;"><canvas id="effortPhase"></canvas></div>
+  </div>
+  <div class="box"><div class="box-t">자체 관리 유형별 비중</div>
+    <div style="position:relative;height:210px;"><canvas id="effortType"></canvas></div>
+  </div>
+</div>
+</div><!-- /panel-effort -->
+
+<!-- ============================================================ TAB 6: 종합 적정성·리스크 -->
+<div id="panel-risk" class="panel">
+<div class="box">
+  <div class="box-t">단계별 투입 적정성 평가 (비대면 사업 전제 재반영)</div>
+  <table class="tbl">
+    <thead><tr><th>단계</th><th>C1 비중</th><th>C2 비중</th><th>권장범위</th><th>C1</th><th>C2</th><th>비대면 사업 추가 고려사항</th></tr></thead>
+    <tbody>
+      <tr><td>분석 (6~8월)</td><td>6.1%</td><td style="color:#e24b4a;font-weight:700;">0.0%</td><td>7~12%</td>
+        <td><span class="tag-warn">주의</span></td><td><span class="tag-bad">부재</span></td>
+        <td>피그마 디자인 시스템 스토리보드 제공 전 화면 분석 불가. 대면 코어뱅킹 업무팀과 분석 착수부터 협의 필수. 전 인원 RFP·AS-IS 사전 숙지 병행</td></tr>
+      <tr><td>설계 (9~11월)</td><td>14.3%</td><td style="color:#e24b4a;font-weight:700;">2.4%</td><td>12~18%</td>
+        <td><span class="tag-ok">적정</span></td><td><span class="tag-bad">부족</span></td>
+        <td>피그마 디자인 시스템 및 AI 화면(Front) 소스(템플릿) 개발단계 전부터 순차적 제공 필요 — 지연 시 개발 일정 준수 불가. BackEnd 소스 자동변환 조기 착수 필요. C2 황명환 선행 요건정의 이 단계 이전 완료 목표</td></tr>
+      <tr><td>개발 (12~4월)</td><td>34.6%</td><td>38.0%</td><td>30~40%</td>
+        <td><span class="tag-ok">적정</span></td><td><span class="tag-ok">적정</span></td>
+        <td>BackEnd 소스 변환 및 품질점검 + React Front 개발 병행. AI템플릿 활용으로 초급 생산성 향상 기대. 비개발 흡수 시 실개발 공수 감소 주의</td></tr>
+      <tr><td>통합 (5~9월)</td><td>34.6%</td><td style="color:#ba7517;font-weight:700;">43.9%</td><td>25~38%</td>
+        <td><span class="tag-ok">적정</span></td><td><span class="tag-warn">과중</span></td>
+        <td>C2 대출 외부기관(HUG·CB·기금) 연동 통합테스트 → Mock서버 구성 필수(3월). 제3자테스트팀 결함 대응 집중</td></tr>
+      <tr><td>이행 (10~11월)</td><td>9.6%</td><td>12.7%</td><td>8~14%</td>
+        <td><span class="tag-ok">적정</span></td><td><span class="tag-ok">적정</span></td>
+        <td>코어뱅킹 관련 업무팀 및 상품팩토링 재구축(대면사업) 이행 일정 동기화 필수. 레거시 병행 운영 기간 데이터 정합성 검증 포함</td></tr>
+      <tr><td>안정화 (12월)</td><td style="color:#e24b4a;font-weight:700;">0.8%</td><td>2.9%</td><td>2~5%</td>
+        <td><span class="tag-bad">부족</span></td><td><span class="tag-warn">주의</span></td>
+        <td>C1 안정화 3M/M → 5개 상품군 불가. 최소 7M/M 추가 배치 필요. React 전환 후 안정화기 미발견 결함 집중 위험</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="sec">즉시 대응 리스크 — 우선순위별 세밀 진단</div>
+
+<div class="rn p1"><strong>🔴 [P1-1] C1 수신팀 SK 이탈 + 전 인원 경험 부족 (즉각 대응)</strong>
+최재덕 단독 고급 체제. RFP·사전논의 미참여로 현행 수신 업무 파악도 0에서 시작. TBD 3명 미확정. 순개발 13.7M/M으로 8개 수신 상품군(예금·적금·CMA·외화 등) 전담 불가.
+<b>대응:</b> ① TBD-1(중급) 8월 채용→9월 확정, 설계 3M/M 공동작성 ② 최재덕 수신/외환 TBD-4 관리 역할 명시(이동희에서 이관) ③ 공통팀 황찬우 수신 분析 1M/M 지원 분담 ④ 발주처 현행 수신 시스템 자료 착수 전 수령</div>
+<div class="rn p1"><strong>🔴 [P1-2] C1 퇴직연금팀 SK 이탈 + 경험 부족 (즉각 대응)</strong>
+SK 3명(48M/M) 이탈. DC·DB·IRP 법규 복잡 상품을 경험 없이 이현주 단독 분析 주도.
+<b>대응:</b> ① 이현주: 법규검토·현업협의·요건정의 집중 / 김형일: Front 개발 리더십 담당 ② 문학일 이행 1M/M 연장 계약 ③ 이현주 안정화 1M/M 추가 배치 ④ 연금법·자본시장법 주요 요건 정리 착수 전 완료</div>
+<div class="rn p1"><strong>🔴 [P1-3] C2 황명환 과부하 + 분析 0M/M (즉각 대응)</strong>
+분析 0M/M 보완 + 팀 전체 관리 + 개발 리더십 3중 역할. 순개발 6M/M으로 사실상 불가.
+<b>대응:</b> ① 황명환 8~10월 선행 요건정의 계약 범위 조정 ② 김도훈 개발 부리더 공식 지정 ③ 주택도시기금·부동산 요건정의 우선 작성(가장 고위험)</div>
+<div class="rn p1"><strong>🔴 [P1-4] C2 주택도시기금·부동산 대출 — 분析·설계·이행 3중 공백 (즉각 대응)</strong>
+정책성 상품(기금API·LTV·DSR) 복잡도 최고 수준에서 요건 정의 전무. 이행 0.5M/M.
+<b>대응:</b> ① 황명환 요건정의서 우선 작성 → 문선희·유현석·송현민 인수인계 패키지 ② 이행 M/M 각 0.5→1.5 조정 ③ 기금API Mock서버 조기 구성</div>
+<div class="rn p2"><strong>🟠 [P2-1] 전 인원 React 전환 Effort 미산정 (설계 착수 전)</strong>
+JSP→React 전환은 컴포넌트 구조·상태관리·Hook 패턴 전면 변경. 경험 없는 초·중급 개발 단계 초반 2~3개월 생산성 30~50% 하락.
+<b>대응:</b> ① 11월 선도개발 상품팀 일부 참여 필수 ② AI솔루션 초기템플릿 Tool 사전 교육(개발 착수 2주 전) ③ 고급 리더 React 코드리뷰 주 1회 설정</div>
+<div class="rn p2"><strong>🟠 [P2-2] 대면 코어뱅킹 업무팀 협의 지연 리스크 (분析 착수부터)</strong>
+비대면 상품 핵심 데이터(수신 원장·여신 심사·상품 코드)를 대면 업무팀에 요청하는 구조. 협의 지연 시 상품 기능명세서 작성 불가.
+<b>대응:</b> ① 분析 착수 즉시 대면 업무팀 협의 채널 개설 ② 월 2회 정례 협의 슬롯 고정 ③ API Hub/상품팩토링 연동 요건 Freeze 기준일 사전 합의</div>
+<div class="rn p2"><strong>🟠 [P2-3] C1 수신/외환 TBD-4 단독 초급 설계 0M/M (설계 착수 전)</strong>
+최재덕이 수신/외환 인터페이스 정의서 선행 작성 후 TBD-4 인수인계. 수신 TBD 중 1명을 수신/외환으로 전환 배치 방안도 검토.</div>
+<div class="rn p3"><strong>🟡 [P3-1] C2 통합 43.9% 과중 — Mock서버 미구성 시 악화</strong>
+외부기관 5곳 실시간 호출. Mock서버 없이 통합테스트 시 커버리지 심각 저하.
+<b>대응:</b> 통합 착수 2개월 전(3월) Mock서버 완료 목표. 기술공통 TA팀 주관·C2 김도훈 협의</div>
+<div class="rn p3"><strong>🟡 [P3-2] C1 안정화 3M/M — React 전환 후 미발견 결함 집중</strong>
+안정화 최소 10M/M(+7M/M) 추가. 최재덕·이현주·오성균·최정일 중 상품군별 1명씩 연장 계약 필수</div>
+<div class="rn ok"><strong>🟢 [양호] 공통·보험/골드·전월세 대출·펀드/ISA</strong>
+SK 이탈 영향 없음. 고급+중급 구성 적정. TBD 확정 후 안정화 가능. 피그마 스토리보드 제공 일정 준수 시 계획 내 진행 가능</div>
+
+<div class="box" style="margin-top:12px;">
+  <div class="box-t">5대 즉시 조치 사항</div>
+  <table class="tbl">
+    <thead><tr><th>#</th><th>조치 항목</th><th>기한</th><th>담당</th><th>효과</th></tr></thead>
+    <tbody>
+      <tr><td style="color:#c0392b;font-weight:700;">1</td><td>RFP·제안서·AS-IS 자료 전 인원 배포 및 브리핑</td><td style="color:#c0392b;">착수 전 2주</td><td>이동희·발주처</td><td>경험 부족 보완. 도메인 이해 기반 확보</td></tr>
+      <tr><td style="color:#c0392b;font-weight:700;">2</td><td>수신 TBD 1~4 채용공고 게시</td><td style="color:#c0392b;">8월 중</td><td>KBDS 인사팀</td><td>9월 확정 시 설계 참여 가능</td></tr>
+      <tr><td style="color:#c0392b;font-weight:700;">3</td><td>황명환 선행 요건정의 계약 범위 조정</td><td style="color:#c0392b;">즉시</td><td>발주처·비디</td><td>C2 분析 0M/M 구조적 한계 보완</td></tr>
+      <tr><td style="color:#e67e22;font-weight:700;">4</td><td>피그마 스토리보드 최초 제공 일정 확정</td><td style="color:#e67e22;">9월 전</td><td>개인뱅킹UXUI팀</td><td>화면 분析 착수 기준 확보</td></tr>
+      <tr><td style="color:#e67e22;font-weight:700;">5</td><td>대면 코어뱅킹 업무팀 협의 채널 개설</td><td style="color:#e67e22;">착수 D+1주</td><td>이동희·황명환</td><td>연동 요건 정의 조기 착수</td></tr>
+    </tbody>
+  </table>
+</div>
+</div><!-- /panel-risk -->
+
+</div><!-- /wrap -->
+</div><!-- /main-content -->
+
+<script>
+// 패스워드 체크
+function checkPw(){
+  const v=document.getElementById('pw-input').value;
+  const err=document.getElementById('pw-err');
+  if(v==='6100'){
+    document.getElementById('pw-overlay').style.display='none';
+    document.getElementById('main-content').style.display='block';
+  } else {
+    err.textContent='패스워드가 올바르지 않습니다.';
+    document.getElementById('pw-input').value='';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+// 탭 전환
+function sw(id){
+  const ids=['overview','kickoff','c1detail','c2detail','effort','risk'];
+  ids.forEach((v,i)=>{
+    document.querySelectorAll('.tab')[i].classList.toggle('active',v===id);
+    const p=document.getElementById('panel-'+v);
+    p.style.display=(v===id)?'block':'none';
+    p.classList.toggle('active',v===id);
+  });
+}
+ids=['overview','kickoff','c1detail','c2detail','effort','risk'];
+ids.forEach(id=>{
+  document.getElementById('panel-'+id).style.display=(id==='overview')?'block':'none';
+});
+
+const tc='#666',gc='rgba(0,0,0,0.07)';
+Chart.defaults.color=tc;Chart.defaults.font.size=11;
+
+// 월별 투입 — 단계명 포함 라벨
+const monthLabels=[
+  '분석\n6월','분석\n7월','분석\n8월',
+  '설계\n9월','설계\n10월','설계\n11월',
+  '개발\n12월','개발\n1월','개발\n2월','개발\n3월','개발\n4월',
+  '통합\n5월','통합\n6월','통합\n7월','통합\n8월','통합\n9월',
+  '이행\n10월','이행\n11월',
+  '안정화\n12월'
+];
+new Chart(document.getElementById('monthChart'),{
+  type:'line',
+  data:{
+    labels:monthLabels,
+    datasets:[
+      {label:'C1 비대출',data:[6,8,8,12.5,19,20,25,25,25,25,25,25,25,25,25,25,23.5,11,3],borderColor:'#3266ad',backgroundColor:'rgba(50,102,173,0.10)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'#3266ad'},
+      {label:'C2 대출',data:[0,0,0,0,0,5,9.5,14.5,18,18,18,18,18,18,18,18,15.5,10.5,6],borderColor:'#ba7517',backgroundColor:'rgba(186,117,23,0.10)',fill:true,tension:0.3,pointRadius:2,pointBackgroundColor:'#ba7517'}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{boxWidth:10,padding:8}}},
+    scales:{
+      x:{grid:{display:false},ticks:{font:{size:8.5},maxRotation:0,autoSkip:false}},
+      y:{grid:{color:gc},min:0,title:{display:true,text:'인원(명)',font:{size:10}}}
+    }
+  }
+});
+
+// 단계별 비중
+new Chart(document.getElementById('phaseChart'),{
+  type:'bar',
+  data:{
+    labels:['분析','설계','개발','통합','이행','안정화'],
+    datasets:[
+      {label:'C1(%)',data:[6.1,14.3,34.6,34.6,9.6,0.8],backgroundColor:'rgba(50,102,173,0.75)',borderRadius:3},
+      {label:'C2(%)',data:[0.0,2.4,38.0,43.9,12.7,2.9],backgroundColor:'rgba(186,117,23,0.70)',borderRadius:3},
+      {label:'전체(%)',data:[9.2,14.6,32.6,32.5,9.3,1.9],backgroundColor:'rgba(150,150,150,0.45)',borderRadius:3}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{boxWidth:10,padding:8}}},
+    scales:{x:{grid:{display:false}},y:{grid:{color:gc},ticks:{callback:v=>v+'%'},max:50}}}
+});
+
+// 비개발 단계별 stacked
+new Chart(document.getElementById('effortPhase'),{
+  type:'bar',
+  data:{
+    labels:['분析','설계','개발','통합','이행','안정화'],
+    datasets:[
+      {label:'C1 타팀대응',data:[4,8,10,10,6,3.5],backgroundColor:'rgba(230,126,34,0.75)',borderRadius:2},
+      {label:'C1 자체관리',data:[3,18,22,16,7,3],backgroundColor:'rgba(50,102,173,0.70)',borderRadius:2},
+      {label:'C2 타팀대응',data:[0,6,8,8,3,1],backgroundColor:'rgba(192,57,43,0.65)',borderRadius:2},
+      {label:'C2 자체관리',data:[0,9,15,12,5,6],backgroundColor:'rgba(142,68,173,0.60)',borderRadius:2}
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:true,labels:{boxWidth:8,padding:6,font:{size:10}}}},
+    scales:{x:{stacked:true,grid:{display:false}},y:{stacked:true,grid:{color:gc},ticks:{callback:v=>v+' M/M'}}}}
+});
+
+// 자체관리 유형별 — 범례 포함
+const effortLabels=['산출물 관리','계획·보고','요구사항 관리','인력 관리','내부 회의','이슈·리스크','테스트 관리','법규 검토','이행·컷오버','사업자 조율','운영이관'];
+const effortData=[18,15,14,11,12,10,9.5,9,7,5.5,5];
+const effortColors=['#185fa5','#3266ad','#5a9fd4','#e67e22','#7bbde0','#c0392b','#9fbfdf','#e74c3c','#f0c040','#27ae60','#8e44ad'];
+new Chart(document.getElementById('effortType'),{
+  type:'doughnut',
+  data:{
+    labels:effortLabels,
+    datasets:[{data:effortData,backgroundColor:effortColors,borderWidth:1,borderColor:'#fff'}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,cutout:'45%',
+    plugins:{
+      legend:{display:true,position:'right',labels:{boxWidth:10,padding:5,font:{size:9.5},
+        generateLabels:function(chart){
+          const data=chart.data;
+          return data.labels.map((label,i)=>({
+            text:label+' ('+data.datasets[0].data[i]+')',
+            fillStyle:data.datasets[0].backgroundColor[i],
+            strokeStyle:'#fff',lineWidth:1,index:i
+          }));
+        }
+      }},
+      tooltip:{callbacks:{label:c=>c.label+': '+c.raw+' M/M'}}
+    }
+  }
+});
+</script>
+</body>
+</html>
